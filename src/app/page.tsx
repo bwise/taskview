@@ -1,10 +1,5 @@
 "use client"
 
-import WorkflowChart from "@/components/WorkflowGraph";
-import Timeline from "@/components/Timeline";
-import WorkflowViewer from "@/components/WorkflowViewer";
-import TimeAxis from "@/components/TimeAxis";
-import WorkflowGraph from "@/components/WorkflowGraph";
 import WorkflowGraphWithTimeAxis from "@/components/WorkflowGraphWithTimeAxis";
 
 export default function Home() {
@@ -14,7 +9,13 @@ export default function Home() {
         { name: "Step 3", startTime: new Date("2025-01-01T00:30:13"), endTime: new Date("2025-03-01T00:00:43"), retry: 0 },
         { name: "Step 4", startTime: new Date("2025-03-01T00:00:43"), endTime: new Date("2025-04-01T00:00:53"), retry: 2 },
         { name: "Step 5", startTime: new Date("2025-04-01T00:00:53"), endTime: new Date("2025-05-01T00:00:00"), retry: 1 },
-        { name: "Final Step", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
+        { name: "Step 6", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
+        { name: "Step 7", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
+        { name: "Step 8", startTime: new Date("2025-07-01T00:00:00"), endTime: new Date("2025-08-01T00:00:00"), retry: 0 },
+        { name: "Step 9", startTime: new Date("2025-07-01T00:00:00"), endTime: new Date("2025-09-01T00:00:00"), retry: 0 },
+        { name: "Step 10", startTime: new Date("2025-09-01T00:00:00"), endTime: new Date("2025-08-01T03:00:00"), retry: 0 },
+        { name: "Step 11", startTime: new Date("2025-09-01T00:00:00"), endTime: new Date("2025-08-01T03:45:00"), retry: 0 },
+        { name: "Step 13", startTime: new Date("2025-08-01T00:00:00"), endTime: new Date("2025-10-01T06:45:00"), retry: 0 },
     ];
     console.log(data);
 
@@ -26,7 +27,7 @@ export default function Home() {
     <div>
       <main>
 
-          <WorkflowGraphWithTimeAxis data={data} initialTimespan={[new Date("2024-12-01T00:00:00"), new Date("2025-07-01T00:00:00")]} height={400} width={800}></WorkflowGraphWithTimeAxis>
+          <WorkflowGraphWithTimeAxis data={data} initialTimespan={[new Date("2024-12-01T00:00:00"), new Date("2025-10-01T06:45:00")]} height={200} width={800}></WorkflowGraphWithTimeAxis>
       </main>
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
         <a

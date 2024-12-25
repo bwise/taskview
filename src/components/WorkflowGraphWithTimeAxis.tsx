@@ -22,13 +22,15 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                                                                                  initialTimespan = [new Date(Date.now() - 3600000), new Date()],
                                                                              }) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const timeAxisRef = useRef<SVGSVGElement | null>(null);
     const timespanRef = useRef<[Date, Date]>(initialTimespan);
 
     useEffect(() => {
-        const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+        const margin = {top: 20, right: 20, bottom: 20, left: 20};
         const axisWidth = width - margin.left - margin.right;
         const axisHeight = height - margin.top - margin.bottom;
+
 
         // Define the time scale
         const timeScale = d3
@@ -43,6 +45,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         svg.selectAll("*").remove();
         svg
             .style("border", "2px solid black") // Add black border with 2px width
+            .style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
         timeAxisSvg.selectAll("*").remove();
 
         // Create tooltip
@@ -72,7 +75,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         // Workflow Graph
         const chartGroup = svg
             .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top + 40})`);
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const barHeight = 30;
         const barSpacing = 10;
@@ -146,12 +149,19 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 tooltip.style("visibility", "hidden");
             });
 
-        // Zoom Behavior
+        // Zoom Behavior (allows panning and zooming)
         const zoom = d3
             .zoom()
+            .filter((event) => {
+                // Allow panning (dragging) with mouse or touch gestures
+                if (event.type === "mousedown" || event.type === "touchstart") return true;
+
+                // Allow zooming only if Shift key is pressed during wheel events
+                return event.type === "wheel" && event.shiftKey;
+            })
             .scaleExtent([1, 10000]) // Limit zoom levels
             .translateExtent([
-                [0, 0],
+                [40, 40],
                 [axisWidth, axisHeight],
             ])
             .on("zoom", (event) => {
@@ -172,7 +182,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                     .attr("x", (d) => newScale(d.startTime) + 5);
             });
 
-        // Apply zoom to both SVGs
+        // Apply zoom to the SVG (for zoom and pan)
         svg.call(zoom);
 
         return () => {
@@ -183,11 +193,22 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     }, [data, initialTimespan, width, height]);
 
     return (
-        <div>
-            <svg ref={timeAxisRef} width={width} height={100} />
-            <svg ref={svgRef} width={width} height={height} />
+    <div>
+        <svg ref={timeAxisRef} width={width} height={50}/>
+        <div
+            ref={containerRef}
+            style={{
+                width,
+                height,
+                overflowY: "scroll",
+                border: "1px solid black",
+            }}
+        >
+            <svg ref={svgRef} height={data.length * 45} width={width}/>
         </div>
-    );
+    </div>
+)
+    ;
 };
 
 export default WorkflowGraphWithTimeAxis;
