@@ -12,7 +12,7 @@ export default function Home() {
         { name: "Step 1", startTime: new Date("2024-12-01T00:00:00"), endTime: new Date("2025-01-01T00:00:10"), retry: 0 },
         { name: "Step 2", startTime: new Date("2025-01-01T00:00:10"), endTime: new Date("2025-01-01T00:30:13"), retry: 1 },
         { name: "Step 3", startTime: new Date("2025-01-01T00:30:13"), endTime: new Date("2025-03-01T00:00:43"), retry: 0 },
-        { name: "Step 4", startTime: new Date("2025-02-01T00:00:43"), endTime: new Date("2025-04-01T00:00:53"), retry: 2 },
+        { name: "Step 4", startTime: new Date("2025-03-01T00:00:43"), endTime: new Date("2025-04-01T00:00:53"), retry: 2 },
         { name: "Step 5", startTime: new Date("2025-04-01T00:00:53"), endTime: new Date("2025-05-01T00:00:00"), retry: 1 },
         { name: "Final Step", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
     ];

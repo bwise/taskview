@@ -26,7 +26,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     const timespanRef = useRef<[Date, Date]>(initialTimespan);
 
     useEffect(() => {
-        const margin = { top: 20, right: 20, bottom: 40, left: 20 };
+        const margin = { top: 20, right: 20, bottom: 20, left: 20 };
         const axisWidth = width - margin.left - margin.right;
         const axisHeight = height - margin.top - margin.bottom;
 
@@ -41,6 +41,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const timeAxisSvg = d3.select(timeAxisRef.current);
 
         svg.selectAll("*").remove();
+        svg
+            .style("border", "2px solid black") // Add black border with 2px width
         timeAxisSvg.selectAll("*").remove();
 
         // Create tooltip
@@ -48,9 +50,10 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .select("body")
             .append("div")
             .style("position", "absolute")
-            .style("background", "#6799be")
-            .style("border", "1px solid black")
-            .style("border-radius", "8px")
+            .style("background", "#605d5d")
+            .style("border", "2px solid black")
+            .style("color", "white")
+            .style("border-radius", "5px")
             .style("padding", "10px")
             .style("pointer-events", "none")
             .style("visibility", "hidden");
@@ -71,22 +74,58 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top + 40})`);
 
-        const barHeight = 20;
+        const barHeight = 30;
         const barSpacing = 10;
 
-        // Render Bars
-        chartGroup
-            .selectAll("rect")
+        // Render Bars and Labels
+        const activityGroup = chartGroup
+            .selectAll("g.activity")
             .data(data)
             .enter()
+            .append("g")
+            .attr("class", "activity")
+            .attr("transform", (_, i) => `translate(0, ${i * (barHeight + barSpacing)})`);
+
+        // Append the bar to each activity group
+        activityGroup
             .append("rect")
             .attr("x", (d) => timeScale(d.startTime))
-            .attr("y", (_, i) => i * (barHeight + barSpacing))
+            .attr("y", 0)
             .attr("width", (d) => timeScale(d.endTime) - timeScale(d.startTime))
             .attr("height", barHeight)
-            .attr("fill", (d) => (d.retry > 0 ? "orange" : "steelblue"))
-            .attr("stroke", "black")
-            .attr("stroke-width", 1)
+            .attr("rx", 12) // Add horizontal corner radius
+            .attr("ry", 12) // Add vertical corner radius
+            .attr("fill", (d) => (d.retry > 0 ? "#d1dff2" : "#d2f1dd"))
+            .attr("cursor", "pointer")
+            .attr("stroke", (d) => (d.retry > 0 ? "#1e4ccf" : "#197c3b"))
+            .attr("stroke-width", 3);
+
+        // Append the label to each activity group
+        activityGroup
+            .append("text")
+            .attr("class", "step-label")
+            .attr("x", (d) => timeScale(d.startTime) + 10)
+            .attr("y", barHeight / 1.5)
+            .attr("text-anchor", "start")
+            .attr("font-size", 15)
+            .attr("font-weight", "bold")
+            .attr("fill", (d) => (d.retry > 0 ? "#1e4ccf" : "#197c3b"))
+            .attr("cursor", "pointer")
+            .text((d) => `${d.name}`)
+            .call((text) => {
+                text.each(function (d) {
+                    const node = this;
+                    const textWidth = node.getBBox().width;
+                    const barWidth = timeScale(d.endTime) - timeScale(d.startTime);
+                    if (textWidth > barWidth) {
+                        // Truncate text if it doesn't fit in the bar
+                        d3.select(node).text((d) => `...${d.name.slice(0, 10)}`);
+                    }
+                });
+            });
+
+        // Tooltip handling for both bar and label
+        activityGroup
             .on("mouseover", (event, d) => {
                 tooltip
                     .style("visibility", "visible")
@@ -106,19 +145,6 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .on("mouseout", () => {
                 tooltip.style("visibility", "hidden");
             });
-
-        // Add step labels
-        chartGroup
-            .selectAll("text.step-label")
-            .data(data)
-            .enter()
-            .append("text")
-            .attr("class", "step-label")
-            .attr("x", (d) => timeScale(d.startTime) + 5)
-            .attr("y", (_, i) => i * (barHeight + barSpacing) + barHeight / 1.5)
-            .text((d) => `${d.name}`)
-            .attr("font-size", 15)
-            .attr("fill", "white");
 
         // Zoom Behavior
         const zoom = d3
