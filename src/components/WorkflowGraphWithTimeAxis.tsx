@@ -117,7 +117,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .text((d) => `${d.name}`)
             .call((text) => {
                 text.each(function (d) {
-                    const node = this;
+                    let node: SVGTextElement;
+                    node = this;
                     const textWidth = node.getBBox().width;
                     const barWidth = timeScale(d.endTime) - timeScale(d.startTime);
                     if (textWidth > barWidth) {
@@ -173,7 +174,9 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 // Update the bars
                 chartGroup
                     .selectAll("rect")
-                    .attr("x", (d) => newScale(d.startTime))
+                    .attr("x", ({startTime}) => {
+                        return newScale(startTime);
+                    })
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
                 // Update the labels
@@ -200,8 +203,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             style={{
                 width,
                 height,
-                overflowY: "scroll",
-                border: "1px solid black",
+                "overflowY": "scroll",
+                "border": "1px solid black",
             }}
         >
             <svg ref={svgRef} height={data.length * 45} width={width}/>

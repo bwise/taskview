@@ -11,11 +11,11 @@ export default function Home() {
         { name: "Step 5", startTime: new Date("2025-04-01T00:00:53"), endTime: new Date("2025-05-01T00:00:00"), retry: 1 },
         { name: "Step 6", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
         { name: "Step 7", startTime: new Date("2025-05-01T00:00:00"), endTime: new Date("2025-07-01T00:00:00"), retry: 0 },
-        { name: "Step 8", startTime: new Date("2025-07-01T00:00:00"), endTime: new Date("2025-08-01T00:00:00"), retry: 0 },
+        { name: "Step 8", startTime: new Date("2025-07-01T00:00:00"), endTime: new Date("2025-08-01T00:00:00"), retry: 1 },
         { name: "Step 9", startTime: new Date("2025-07-01T00:00:00"), endTime: new Date("2025-09-01T00:00:00"), retry: 0 },
         { name: "Step 10", startTime: new Date("2025-09-01T00:00:00"), endTime: new Date("2025-09-01T03:00:00"), retry: 0 },
         { name: "Step 11", startTime: new Date("2025-09-01T00:00:00"), endTime: new Date("2025-09-01T03:45:00"), retry: 0 },
-        { name: "Step 13", startTime: new Date("2025-09-01T03:45:00"), endTime: new Date("2025-11-01T06:45:00"), retry: 0 },
+        { name: "Step 13", startTime: new Date("2025-09-01T03:45:00"), endTime: new Date("2025-11-01T06:45:00"), retry: 2 },
     ];
     console.log(data);
 
@@ -26,17 +26,8 @@ export default function Home() {
     return (
     <div>
       <main>
-
-          <WorkflowGraphWithTimeAxis data={data} initialTimespan={[data[0].startTime, data[data.length-1].endTime]} height={200} width={800}></WorkflowGraphWithTimeAxis>
+          <WorkflowGraphWithTimeAxis data={data} initialTimespan={[data[0].startTime, data[data.length-1].endTime]} height={400} width={1200}></WorkflowGraphWithTimeAxis>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="/legal-terms"
-          target="_blank"
-          rel="noopener noreferrer">Legal Terms
-        </a>
-      </footer>
     </div>
   );
 }
