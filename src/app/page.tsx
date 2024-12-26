@@ -24,7 +24,7 @@ export default function Home() {
     }
 
     return (
-    <div>
+    <div style={{"border":"2px solid black", "width":"1210px", "margin":"20px"}}>
       <main>
           <WorkflowGraphWithTimeAxis data={data} initialTimespan={[data[0].startTime, data[data.length-1].endTime]} height={400} width={1200}></WorkflowGraphWithTimeAxis>
       </main>

@@ -44,7 +44,6 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
 
         svg.selectAll("*").remove();
         svg
-            .style("border", "2px solid black") // Add black border with 2px width
             .style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
         timeAxisSvg.selectAll("*").remove();
 
@@ -196,7 +195,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     }, [data, initialTimespan, width, height]);
 
     return (
-    <div>
+    <div style={{"padding":"3px"}}>
         <svg ref={timeAxisRef} width={width} height={50}/>
         <div
             ref={containerRef}
@@ -204,10 +203,10 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 width,
                 height,
                 "overflowY": "scroll",
-                "border": "1px solid black",
+                "border": "0px",
             }}
         >
-            <svg ref={svgRef} height={data.length * 45} width={width}/>
+            <svg ref={svgRef} height={data.length * 43} width={width}/>
         </div>
     </div>
 )
