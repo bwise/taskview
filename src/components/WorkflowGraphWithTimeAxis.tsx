@@ -38,6 +38,13 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .domain(timespanRef.current)
             .range([0, axisWidth]);
 
+        // Compute the data range
+        const minTime = d3.min(data, (d) => d.startTime) as Date;
+        const maxTime = d3.max(data, (d) => d.endTime) as Date;
+
+        const minPixel = timeScale(minTime);
+        const maxPixel = timeScale(maxTime) + 15;
+
         // Set up SVG containers
         const svg = d3.select(svgRef.current);
         const timeAxisSvg = d3.select(timeAxisRef.current);
@@ -77,7 +84,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const barHeight = 30;
-        const barSpacing = 10;
+        const barSpacing = 5;
 
         // Render Bars and Labels
         const activityGroup = chartGroup
@@ -149,7 +156,6 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 tooltip.style("visibility", "hidden");
             });
 
-        // Zoom Behavior (allows panning and zooming)
         const zoom = d3
             .zoom()
             .filter((event) => {
@@ -161,8 +167,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             })
             .scaleExtent([1, 10000]) // Limit zoom levels
             .translateExtent([
-                [40, 40],
-                [axisWidth, axisHeight],
+                [minPixel, 0], // Prevent panning beyond the first activity
+                [maxPixel, axisHeight + 20], // Prevent panning beyond the last activity
             ])
             .on("zoom", (event) => {
                 const newScale = event.transform.rescaleX(timeScale);
@@ -173,18 +179,16 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 // Update the bars
                 chartGroup
                     .selectAll("rect")
-                    .attr("x", ({startTime}) => {
-                        return newScale(startTime);
-                    })
+                    .attr("x", ({ startTime }) => newScale(startTime))
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
                 // Update the labels
                 chartGroup
                     .selectAll("text.step-label")
                     .attr("x", (d) => newScale(d.startTime) + 5);
-            });
+            })
 
-        // Apply zoom to the SVG (for zoom and pan)
+// Apply zoom to the SVG (for zoom and pan)
         svg.call(zoom);
 
         return () => {
@@ -196,7 +200,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
 
     return (
     <div style={{"padding":"3px"}}>
-        <svg ref={timeAxisRef} width={width} height={50}/>
+        <svg ref={timeAxisRef} width={width} height={50} style={{"border-bottom":"1px solid black"}} />
         <div
             ref={containerRef}
             style={{
