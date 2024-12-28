@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
-import '../app/graph.css'
+import { config } from "./GraphConfig"; // Import the config file
+import '../app/graph.css';
 
 interface WorkflowStep {
     name: string;
@@ -28,16 +29,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     const timespanRef = useRef<[Date, Date]>(initialTimespan);
 
     useEffect(() => {
-        const margin = {top: 20, right: 25, bottom: 20, left: 25};
-        const barHeight = 30;
-        const barSpacing = 10;
-        const stepBorderRadius = 12;
-        const stepFontSize = 15;
-
-        const stepColor = "#197c3b";
-        const innerStepColor = "#d2f1dd";
-        const retryStepColor = "#1e4ccf";
-        const innerRetryStepColor = "#d1dff2";
+        const { margin, barHeight, barSpacing, stepBorderRadius, stepFontSize, stepColor, innerStepColor, retryStepColor, innerRetryStepColor } = config;
 
         const axisWidth = width - margin.left - margin.right;
         const axisHeight = height - margin.top - margin.bottom;
@@ -56,9 +48,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const maxPixel = timeScale(maxTime) + 15;
 
         // Set up SVG containers
-
         const timeAxisSvg = d3.select(timeAxisRef.current);
-
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
         svg.style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
@@ -68,7 +58,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const tooltip = d3
             .select("body")
             .append("div")
-            .attr("class","tooltip");
+            .attr("class", "tooltip");
+
         // Time Axis
         const timeAxisGroup = timeAxisSvg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -81,11 +72,14 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
 
         // Workflow Graph
         const chartGroup = svg.append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`)
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // Render Bars and Labels
         const activityGroup = chartGroup
-            .selectAll("g.activity").data(data).enter().append("g")
+            .selectAll("g.activity")
+            .data(data)
+            .enter()
+            .append("g")
             .attr("class", "activity")
             .attr("transform", (_, i) => `translate(0, ${i * (barHeight + barSpacing)})`);
 
@@ -167,7 +161,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 // Update the bars
                 chartGroup
                     .selectAll("rect")
-                    .attr("x", function ({startTime: startTime}) {
+                    .attr("x", function ({ startTime }) {
                         return newScale(startTime);
                     })
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
@@ -176,9 +170,9 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 chartGroup
                     .selectAll("text.step-label")
                     .attr("x", (d) => newScale(d.startTime) + 5);
-            })
+            });
 
-// Apply zoom to the SVG (for zoom and pan)
+        // Apply zoom to the SVG (for zoom and pan)
         svg.call(zoom);
 
         return () => {
@@ -189,22 +183,21 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     }, [data, initialTimespan, width, height]);
 
     return (
-    <div>
-        <svg ref={timeAxisRef} className="timeAxis" width={width+6} height={50} />
-        <div
-            ref={containerRef}
-            style={{
-                width,
-                height,
-                "overflowY": "scroll",
-                "border": "0px",
-            }}
-        >
-            <svg ref={svgRef} height={data.length * 43} width={width}/>
+        <div>
+            <svg ref={timeAxisRef} className="timeAxis" width={width + 6} height={50} />
+            <div
+                ref={containerRef}
+                style={{
+                    width,
+                    height,
+                    overflowY: "scroll",
+                    border: "0px",
+                }}
+            >
+                <svg ref={svgRef} height={data.length * 43} width={width} />
+            </div>
         </div>
-    </div>
-)
-    ;
+    );
 };
 
 export default WorkflowGraphWithTimeAxis;
