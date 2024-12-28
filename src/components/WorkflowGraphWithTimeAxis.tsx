@@ -166,10 +166,22 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                     })
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
-                // Update the labels
+                // Update the labels and check if text fits within the bar after zoom
                 chartGroup
                     .selectAll("text.step-label")
-                    .attr("x", (d) => newScale(d.startTime) + 5);
+                    .attr("x", (d) => newScale(d.startTime) + 10)
+                    .each(function (d) {
+                        let node: SVGTextElement = this;
+                        const textWidth = node.getBBox().width + 15;
+                        const barWidth = newScale(d.endTime) - newScale(d.startTime);
+                        if (textWidth > barWidth) {
+                            // Truncate text if it doesn't fit
+                            d3.select(node).text((d) => `...${d.name.slice(0, 10)}`);
+                        } else {
+                            // Display full text if it fits
+                            d3.select(node).text((d) => d.name);
+                        }
+                    });
             });
 
         // Apply zoom to the SVG (for zoom and pan)
