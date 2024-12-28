@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
+import '../app/graph.css'
 
 interface WorkflowStep {
     name: string;
@@ -16,8 +17,8 @@ interface WorkflowGraphWithTimeAxisProps {
 }
 
 const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
-                                                                                 width = 800,
-                                                                                 height = 300,
+                                                                                 width = 1000,
+                                                                                 height = 400,
                                                                                  data,
                                                                                  initialTimespan = [new Date(Date.now() - 3600000), new Date()],
                                                                              }) => {
@@ -27,10 +28,19 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     const timespanRef = useRef<[Date, Date]>(initialTimespan);
 
     useEffect(() => {
-        const margin = {top: 20, right: 20, bottom: 20, left: 20};
+        const margin = {top: 20, right: 25, bottom: 20, left: 25};
+        const barHeight = 30;
+        const barSpacing = 10;
+        const stepBorderRadius = 12;
+        const stepFontSize = 15;
+
+        const stepColor = "#197c3b";
+        const innerStepColor = "#d2f1dd";
+        const retryStepColor = "#1e4ccf";
+        const innerRetryStepColor = "#d1dff2";
+
         const axisWidth = width - margin.left - margin.right;
         const axisHeight = height - margin.top - margin.bottom;
-
 
         // Define the time scale
         const timeScale = d3
@@ -46,79 +56,61 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const maxPixel = timeScale(maxTime) + 15;
 
         // Set up SVG containers
-        const svg = d3.select(svgRef.current);
+
         const timeAxisSvg = d3.select(timeAxisRef.current);
 
+        const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
-        svg
-            .style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
+        svg.style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
         timeAxisSvg.selectAll("*").remove();
 
         // Create tooltip
         const tooltip = d3
             .select("body")
             .append("div")
-            .style("position", "absolute")
-            .style("background", "#605d5d")
-            .style("border", "2px solid black")
-            .style("color", "white")
-            .style("border-radius", "5px")
-            .style("padding", "10px")
-            .style("pointer-events", "none")
-            .style("visibility", "hidden");
-
+            .attr("class","tooltip");
         // Time Axis
-        const timeAxisGroup = timeAxisSvg
-            .append("g")
+        const timeAxisGroup = timeAxisSvg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const xAxis = d3.axisBottom(timeScale).ticks(10);
+        const xAxis = d3.axisBottom(timeScale);
         timeAxisGroup
             .call(xAxis)
             .selectAll("text")
             .style("text-anchor", "middle");
 
         // Workflow Graph
-        const chartGroup = svg
-            .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        const barHeight = 30;
-        const barSpacing = 5;
+        const chartGroup = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`)
 
         // Render Bars and Labels
         const activityGroup = chartGroup
-            .selectAll("g.activity")
-            .data(data)
-            .enter()
-            .append("g")
+            .selectAll("g.activity").data(data).enter().append("g")
             .attr("class", "activity")
             .attr("transform", (_, i) => `translate(0, ${i * (barHeight + barSpacing)})`);
 
-        // Append the bar to each activity group
         activityGroup
             .append("rect")
             .attr("x", (d) => timeScale(d.startTime))
             .attr("y", 0)
             .attr("width", (d) => timeScale(d.endTime) - timeScale(d.startTime))
             .attr("height", barHeight)
-            .attr("rx", 12) // Add horizontal corner radius
-            .attr("ry", 12) // Add vertical corner radius
-            .attr("fill", (d) => (d.retry > 0 ? "#d1dff2" : "#d2f1dd"))
+            .attr("rx", stepBorderRadius) // Add horizontal corner radius
+            .attr("ry", stepBorderRadius) // Add vertical corner radius
+            .attr("fill", (d) => (d.retry > 0 ? innerRetryStepColor : innerStepColor))
             .attr("cursor", "pointer")
-            .attr("stroke", (d) => (d.retry > 0 ? "#1e4ccf" : "#197c3b"))
+            .attr("stroke", (d) => (d.retry > 0 ? retryStepColor : stepColor))
             .attr("stroke-width", 3);
 
-        // Append the label to each activity group
         activityGroup
             .append("text")
             .attr("class", "step-label")
             .attr("x", (d) => timeScale(d.startTime) + 10)
             .attr("y", barHeight / 1.5)
             .attr("text-anchor", "start")
-            .attr("font-size", 15)
+            .attr("font-size", stepFontSize)
             .attr("font-weight", "bold")
-            .attr("fill", (d) => (d.retry > 0 ? "#1e4ccf" : "#197c3b"))
+            .attr("fill", (d) => (d.retry > 0 ? retryStepColor : stepColor))
             .attr("cursor", "pointer")
             .text((d) => `${d.name}`)
             .call((text) => {
@@ -139,7 +131,6 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             .on("mouseover", (event, d) => {
                 tooltip
                     .style("visibility", "visible")
-                    .style("font-size", "10pt")
                     .html(`
                     <strong>${d.name}</strong><br/>
                     Start: ${d.startTime.toLocaleString()}<br/>
@@ -159,10 +150,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const zoom = d3
             .zoom()
             .filter((event) => {
-                // Allow panning (dragging) with mouse or touch gestures
                 if (event.type === "mousedown" || event.type === "touchstart") return true;
-
-                // Allow zooming only if Shift key is pressed during wheel events
                 return event.type === "wheel" && event.shiftKey;
             })
             .scaleExtent([1, 10000]) // Limit zoom levels
@@ -179,7 +167,9 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 // Update the bars
                 chartGroup
                     .selectAll("rect")
-                    .attr("x", ({ startTime }) => newScale(startTime))
+                    .attr("x", function ({startTime: startTime}) {
+                        return newScale(startTime);
+                    })
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
                 // Update the labels
@@ -199,8 +189,8 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     }, [data, initialTimespan, width, height]);
 
     return (
-    <div style={{"padding":"3px"}}>
-        <svg ref={timeAxisRef} width={width} height={50} style={{"border-bottom":"1px solid black"}} />
+    <div>
+        <svg ref={timeAxisRef} className="timeAxis" width={width+6} height={50} />
         <div
             ref={containerRef}
             style={{

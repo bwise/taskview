@@ -1,0 +1,17 @@
+.tooltip {
+    position: absolute;
+    background: #39393b;
+    border: 2px solid black;
+    color: white;
+    border-radius: 5px;
+    padding: 10px;
+    pointer-events: none;
+    visibility: hidden;
+    font-size: 10pt;
+    z-index: 1000;
+}
+.timeAxis {
+    border-bottom: 1px solid black;
+    background-color: #595960;
+    color: white;
+}
