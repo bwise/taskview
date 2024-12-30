@@ -2,27 +2,15 @@ import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { config } from "./GraphConfig"; // Import the config file
 import '../app/graph.css';
+import { addTooltipHandlers } from "./TooltipHandlers";
+import WfGraphProps from './WfGraphProps'
 
-interface WorkflowStep {
-    name: string;
-    startTime: Date;
-    endTime: Date;
-    retry: number;
-}
-
-interface WorkflowGraphWithTimeAxisProps {
-    width?: number;
-    height?: number;
-    data: WorkflowStep[];
-    initialTimespan?: [Date, Date];
-}
-
-const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
-                                                                                 width = 1000,
-                                                                                 height = 400,
-                                                                                 data,
-                                                                                 initialTimespan = [new Date(Date.now() - 3600000), new Date()],
-                                                                             }) => {
+const WfGraph: React.FC<WfGraphProps> = ({
+                                             width = 1000,
+                                             height = 400,
+                                             data,
+                                             initialTimespan = [new Date(Date.now() - 3600000), new Date()],
+                                         }) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const timeAxisRef = useRef<SVGSVGElement | null>(null);
@@ -47,9 +35,11 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
         const minPixel = timeScale(minTime);
         const maxPixel = timeScale(maxTime) + 15;
 
-        // Set up SVG containers
-        const timeAxisSvg = d3.select(timeAxisRef.current);
+        // Correctly select the main SVG container
         const svg = d3.select(svgRef.current);
+        const timeAxisSvg = d3.select(timeAxisRef.current);
+
+        // Clear previous elements
         svg.selectAll("*").remove();
         svg.style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
         timeAxisSvg.selectAll("*").remove();
@@ -111,7 +101,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 text.each(function (d) {
                     let node: SVGTextElement;
                     node = this;
-                    const textWidth = node.getBBox().width;
+                    const textWidth = node.getBBox().width + 20;
                     const barWidth = timeScale(d.endTime) - timeScale(d.startTime);
                     if (textWidth > barWidth) {
                         // Truncate text if it doesn't fit in the bar
@@ -121,25 +111,7 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
             });
 
         // Tooltip handling for both bar and label
-        activityGroup
-            .on("mouseover", (event, d) => {
-                tooltip
-                    .style("visibility", "visible")
-                    .html(`
-                    <strong>${d.name}</strong><br/>
-                    Start: ${d.startTime.toLocaleString()}<br/>
-                    End: ${d.endTime.toLocaleString()}<br/>
-                    Retries: ${d.retry}
-                `);
-            })
-            .on("mousemove", (event) => {
-                tooltip
-                    .style("top", `${event.pageY + 10}px`)
-                    .style("left", `${event.pageX + 10}px`);
-            })
-            .on("mouseout", () => {
-                tooltip.style("visibility", "hidden");
-            });
+        addTooltipHandlers(activityGroup, "tooltip");
 
         const zoom = d3
             .zoom()
@@ -147,12 +119,19 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                 if (event.type === "mousedown" || event.type === "touchstart") return true;
                 return event.type === "wheel" && event.shiftKey;
             })
-            .scaleExtent([1, 10000]) // Limit zoom levels
+            .scaleExtent([1, 5000]) // Limit zoom levels
             .translateExtent([
                 [minPixel, 0], // Prevent panning beyond the first activity
                 [maxPixel, axisHeight + 20], // Prevent panning beyond the last activity
             ])
             .on("zoom", (event) => {
+                let debounceTimeout: NodeJS.Timeout | null = null;
+                if (debounceTimeout) {
+                    clearTimeout(debounceTimeout);
+                }
+
+                debounceTimeout = setTimeout(() => {
+
                 const newScale = event.transform.rescaleX(timeScale);
 
                 // Update the time axis
@@ -167,21 +146,33 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
                 // Update the labels and check if text fits within the bar after zoom
-                chartGroup
-                    .selectAll("text.step-label")
-                    .attr("x", (d) => newScale(d.startTime) + 10)
-                    .each(function (d) {
-                        let node: SVGTextElement = this;
-                        const textWidth = node.getBBox().width + 15;
-                        const barWidth = newScale(d.endTime) - newScale(d.startTime);
-                        if (textWidth > barWidth) {
-                            // Truncate text if it doesn't fit
-                            d3.select(node).text((d) => `...${d.name.slice(0, 10)}`);
-                        } else {
-                            // Display full text if it fits
-                            d3.select(node).text((d) => d.name);
-                        }
-                    });
+                    chartGroup
+                        .selectAll("text.step-label")
+                        .attr("x", (d) => newScale(d.startTime) + 10)
+                        .each(function (d) {
+                            const node: SVGTextElement = this;
+
+                            // Cache the current display state of the text
+                            const currentState = node.getAttribute("data-state"); // "full" or "truncated"
+                            const fullText = d.name;
+                            const truncatedText = `...${d.name.slice(0, 10)}`;
+
+                            // Dynamic threshold calculation based on text length
+                            const textLength = fullText.length;
+                            const truncateThreshold = textLength * 8; // Dynamic width for truncation
+                            const revertThreshold = truncateThreshold + 20; // Add a buffer zone for reverting
+
+                            // Calculate the bar width
+                            const barWidth = newScale(d.endTime) - newScale(d.startTime);
+
+                            // Determine whether to change state
+                            if (barWidth < truncateThreshold && currentState !== "truncated") {
+                                d3.select(node).text(truncatedText).attr("data-state", "truncated");
+                            } else if (barWidth >= revertThreshold && currentState !== "full") {
+                                d3.select(node).text(fullText).attr("data-state", "full");
+                            }
+                        });
+                }, 100); // Adjust the debounce delay (in milliseconds) as needed
             });
 
         // Apply zoom to the SVG (for zoom and pan)
@@ -212,4 +203,4 @@ const WorkflowGraphWithTimeAxis: React.FC<WorkflowGraphWithTimeAxisProps> = ({
     );
 };
 
-export default WorkflowGraphWithTimeAxis;
+export default WfGraph;
