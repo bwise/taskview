@@ -1,9 +1,27 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { config } from "./GraphConfig"; // Import the config file
-import '../app/graph.css';
+import "../app/graph.css";
 import { addTooltipHandlers } from "./TooltipHandlers";
-import WfGraphProps from './WfGraphProps'
+import WfGraphProps from "./WfGraphProps";
+
+// Utility function to determine tick format
+const getTickFormat = (rangeInMilliseconds: number): ((date: Date) => string) => {
+    const formatYear = d3.timeFormat("%Y");
+    const formatMonth = d3.timeFormat("%b %y");
+    const formatDay = d3.timeFormat("%d %b %y");
+    const formatTime = d3.timeFormat("%d %b %y %H:%M");
+
+    if (rangeInMilliseconds > 1 * 365 * 24 * 60 * 60 * 1000) {
+        return formatYear;
+    } else if (rangeInMilliseconds > 6 * 30 * 24 * 60 * 60 * 1000) {
+        return formatMonth;
+    } else if (rangeInMilliseconds > 7 * 24 * 60 * 60 * 1000) {
+        return formatDay;
+    } else {
+        return formatTime;
+    }
+};
 
 const WfGraph: React.FC<WfGraphProps> = ({
                                              width = 1000,
@@ -22,49 +40,40 @@ const WfGraph: React.FC<WfGraphProps> = ({
         const axisWidth = width - margin.left - margin.right;
         const axisHeight = height - margin.top - margin.bottom;
 
-        // Define the time scale
-        const timeScale = d3
-            .scaleTime()
+        const timeScale = d3.scaleTime()
             .domain(timespanRef.current)
             .range([0, axisWidth]);
 
-        // Compute the data range
         const minTime = d3.min(data, (d) => d.startTime) as Date;
         const maxTime = d3.max(data, (d) => d.endTime) as Date;
 
         const minPixel = timeScale(minTime);
         const maxPixel = timeScale(maxTime) + 15;
 
-        // Correctly select the main SVG container
         const svg = d3.select(svgRef.current);
         const timeAxisSvg = d3.select(timeAxisRef.current);
 
-        // Clear previous elements
         svg.selectAll("*").remove();
-        svg.style("overflow", "hidden"); // Prevent overflow, allow zooming and scrolling
         timeAxisSvg.selectAll("*").remove();
 
-        // Create tooltip
-        const tooltip = d3
-            .select("body")
+        const tooltip = d3.select("body")
             .append("div")
             .attr("class", "tooltip");
 
-        // Time Axis
         const timeAxisGroup = timeAxisSvg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const xAxis = d3.axisBottom(timeScale);
-        timeAxisGroup
-            .call(xAxis)
+        const rangeInMilliseconds = timespanRef.current[1].getTime() - timespanRef.current[0].getTime();
+        const tickFormat = getTickFormat(rangeInMilliseconds);
+
+        timeAxisGroup.call(xAxis.tickFormat(tickFormat))
             .selectAll("text")
             .style("text-anchor", "middle");
 
-        // Workflow Graph
         const chartGroup = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // Render Bars and Labels
         const activityGroup = chartGroup
             .selectAll("g.activity")
             .data(data)
@@ -73,21 +82,19 @@ const WfGraph: React.FC<WfGraphProps> = ({
             .attr("class", "activity")
             .attr("transform", (_, i) => `translate(0, ${i * (barHeight + barSpacing)})`);
 
-        activityGroup
-            .append("rect")
+        activityGroup.append("rect")
             .attr("x", (d) => timeScale(d.startTime))
             .attr("y", 0)
             .attr("width", (d) => timeScale(d.endTime) - timeScale(d.startTime))
             .attr("height", barHeight)
-            .attr("rx", stepBorderRadius) // Add horizontal corner radius
-            .attr("ry", stepBorderRadius) // Add vertical corner radius
+            .attr("rx", stepBorderRadius)
+            .attr("ry", stepBorderRadius)
             .attr("fill", (d) => (d.retry > 0 ? innerRetryStepColor : innerStepColor))
             .attr("cursor", "pointer")
             .attr("stroke", (d) => (d.retry > 0 ? retryStepColor : stepColor))
             .attr("stroke-width", 3);
 
-        activityGroup
-            .append("text")
+        activityGroup.append("text")
             .attr("class", "step-label")
             .attr("x", (d) => timeScale(d.startTime) + 10)
             .attr("y", barHeight / 1.5)
@@ -99,107 +106,72 @@ const WfGraph: React.FC<WfGraphProps> = ({
             .text((d) => `${d.name}`)
             .call((text) => {
                 text.each(function (d) {
-                    let node: SVGTextElement;
-                    node = this;
+                    const node = this as SVGTextElement;
                     const textWidth = node.getBBox().width + 20;
                     const barWidth = timeScale(d.endTime) - timeScale(d.startTime);
                     if (textWidth > barWidth) {
-                        // Truncate text if it doesn't fit in the bar
-                        d3.select(node).text((d) => `...${d.name.slice(0, 10)}`);
+                        d3.select(node).text(`...${d.name.slice(0, 10)}`);
                     }
                 });
             });
 
-        // Tooltip handling for both bar and label
         addTooltipHandlers(activityGroup, "tooltip");
 
-        const zoom = d3
-            .zoom()
+        const zoom = d3.zoom()
             .filter((event) => {
                 if (event.type === "mousedown" || event.type === "touchstart") return true;
                 return event.type === "wheel" && event.shiftKey;
             })
-            .scaleExtent([1, 5000]) // Limit zoom levels
+            .scaleExtent([1, 5000])
             .translateExtent([
-                [minPixel, 0], // Prevent panning beyond the first activity
-                [maxPixel, axisHeight + 20], // Prevent panning beyond the last activity
+                [minPixel, 0],
+                [maxPixel, axisHeight + 20],
             ])
             .on("zoom", (event) => {
-
-
                 const newScale = event.transform.rescaleX(timeScale);
-                const domain = newScale.domain(); // Get the new time range
-                const rangeInMilliseconds = domain[1].getTime() - domain[0].getTime();
+                const domain = newScale.domain();
+                const newRangeInMilliseconds = domain[1].getTime() - domain[0].getTime();
+                const updatedTickFormat = getTickFormat(newRangeInMilliseconds);
 
-                // Define formatting based on range
-                const formatYear = d3.timeFormat("%Y");
-                const formatMonth = d3.timeFormat("%b %y");
-                const formatDay = d3.timeFormat("%d %b %y");
-                const formatTime = d3.timeFormat("%d %b %y %H:%M");
+                timeAxisGroup.call(d3.axisBottom(newScale).tickFormat(updatedTickFormat));
 
-                // Choose format based on range
-                let tickFormat;
-                if (rangeInMilliseconds > 1 * 365 * 24 * 60 * 60 * 1000) { // > 3 years
-                    tickFormat = formatYear;
-                } else if (rangeInMilliseconds > 6 * 30 * 24 * 60 * 60 * 1000) { // > 6 months
-                    tickFormat = formatMonth;
-                } else if (rangeInMilliseconds > 7 * 24 * 60 * 60 * 1000) { // > 7 days
-                    tickFormat = formatDay;
-                } else {
-                    tickFormat = formatTime;
-                }
-
-
-                // Update the time axis
-                timeAxisGroup.call(d3.axisBottom(newScale));
-// Update the axis
-                timeAxisGroup.call(
-                    d3.axisBottom(newScale).tickFormat(tickFormat)
-                );
-                // Update the bars
-                chartGroup
-                    .selectAll("rect")
-                    .attr("x", function ({ startTime }) {
-                        return newScale(startTime);
-                    })
+                chartGroup.selectAll("rect")
+                    .attr("x", (d) => newScale(d.startTime))
                     .attr("width", (d) => newScale(d.endTime) - newScale(d.startTime));
 
-                // Update the labels and check if text fits within the bar after zoom
-                    chartGroup
-                        .selectAll("text.step-label")
-                        .attr("x", (d) => newScale(d.startTime) + 10)
-                        .each(function (d) {
-                            const node: SVGTextElement = this;
+                chartGroup.selectAll("text.step-label")
+                    .attr("x", (d) => newScale(d.startTime) + 10)
+                    .each(function (d) {
+                        const node: SVGTextElement = this;
 
-                            // Cache the current display state of the text
-                            const currentState = node.getAttribute("data-state"); // "full" or "truncated"
-                            const fullText = d.name;
-                            const truncatedText = `...${d.name.slice(0, 10)}`;
+                        // Cache the current display state of the text
+                        const currentState = node.getAttribute("data-state"); // "full" or "truncated"
+                        const fullText = d.name;
+                        const truncatedText = `...${d.name.slice(0, 10)}`;
 
-                            // Dynamic threshold calculation based on text length
-                            const textLength = fullText.length;
-                            const truncateThreshold = textLength * 8; // Dynamic width for truncation
-                            const revertThreshold = truncateThreshold + 20; // Add a buffer zone for reverting
+                        // Dynamic threshold calculation based on text length
+                        const textLength = fullText.length;
+                        const truncateThreshold = textLength * 8; // Dynamic width for truncation
+                        const revertThreshold = truncateThreshold + 20; // Add a buffer zone for reverting
 
-                            // Calculate the bar width
-                            const barWidth = newScale(d.endTime) - newScale(d.startTime);
+                        // Calculate the bar width
+                        const barWidth = newScale(d.endTime) - newScale(d.startTime);
 
-                            // Determine whether to change state
-                            if (barWidth < truncateThreshold && currentState !== "truncated") {
-                                d3.select(node).text(truncatedText).attr("data-state", "truncated");
-                            } else if (barWidth >= revertThreshold && currentState !== "full") {
-                                d3.select(node).text(fullText).attr("data-state", "full");
-                            }
-                        });
+                        // Determine whether to change state
+                        if (barWidth < truncateThreshold && currentState !== "truncated") {
+                            d3.select(node).text(truncatedText).attr("data-state", "truncated");
+                        } else if (barWidth >= revertThreshold && currentState !== "full") {
+                            d3.select(node).text(fullText).attr("data-state", "full");
+                        }
+                    });
             });
 
-        // Apply zoom to the SVG (for zoom and pan)
         svg.call(zoom);
 
         return () => {
             svg.selectAll("*").remove();
             timeAxisSvg.selectAll("*").remove();
-            tooltip.remove(); // Clean up the tooltip
+            tooltip.remove();
         };
     }, [data, initialTimespan, width, height]);
 
