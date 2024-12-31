@@ -125,18 +125,37 @@ const WfGraph: React.FC<WfGraphProps> = ({
                 [maxPixel, axisHeight + 20], // Prevent panning beyond the last activity
             ])
             .on("zoom", (event) => {
-                let debounceTimeout: NodeJS.Timeout | null = null;
-                if (debounceTimeout) {
-                    clearTimeout(debounceTimeout);
-                }
 
-                debounceTimeout = setTimeout(() => {
 
                 const newScale = event.transform.rescaleX(timeScale);
+                const domain = newScale.domain(); // Get the new time range
+                const rangeInMilliseconds = domain[1].getTime() - domain[0].getTime();
+
+                // Define formatting based on range
+                const formatYear = d3.timeFormat("%Y");
+                const formatMonth = d3.timeFormat("%b %Y");
+                const formatDay = d3.timeFormat("%d %b %Y");
+                const formatTime = d3.timeFormat("%H:\n%M\n %d\n %b\n %Y");
+
+                // Choose format based on range
+                let tickFormat;
+                if (rangeInMilliseconds > 1 * 365 * 24 * 60 * 60 * 1000) { // > 3 years
+                    tickFormat = formatYear;
+                } else if (rangeInMilliseconds > 6 * 30 * 24 * 60 * 60 * 1000) { // > 6 months
+                    tickFormat = formatMonth;
+                } else if (rangeInMilliseconds > 7 * 24 * 60 * 60 * 1000) { // > 7 days
+                    tickFormat = formatDay;
+                } else {
+                    tickFormat = formatTime;
+                }
+
 
                 // Update the time axis
                 timeAxisGroup.call(d3.axisBottom(newScale));
-
+// Update the axis
+                timeAxisGroup.call(
+                    d3.axisBottom(newScale).tickFormat(tickFormat)
+                );
                 // Update the bars
                 chartGroup
                     .selectAll("rect")
@@ -172,7 +191,6 @@ const WfGraph: React.FC<WfGraphProps> = ({
                                 d3.select(node).text(fullText).attr("data-state", "full");
                             }
                         });
-                }, 100); // Adjust the debounce delay (in milliseconds) as needed
             });
 
         // Apply zoom to the SVG (for zoom and pan)
