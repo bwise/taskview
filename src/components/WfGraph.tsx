@@ -133,9 +133,9 @@ const WfGraph: React.FC<WfGraphProps> = ({
 
                 // Define formatting based on range
                 const formatYear = d3.timeFormat("%Y");
-                const formatMonth = d3.timeFormat("%b %Y");
-                const formatDay = d3.timeFormat("%d %b %Y");
-                const formatTime = d3.timeFormat("%H:\n%M\n %d\n %b\n %Y");
+                const formatMonth = d3.timeFormat("%b %y");
+                const formatDay = d3.timeFormat("%d %b %y");
+                const formatTime = d3.timeFormat("%d %b %y %H:%M");
 
                 // Choose format based on range
                 let tickFormat;
